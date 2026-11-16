@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đức Trưởng ♥ Hồng Nhung — Thiệp cưới</title>
+  <meta name="description" content="Trân trọng kính mời bạn đến dự lễ thành hôn của Đức Trưởng & Hồng Nhung" />
+  <meta property="og:title" content="Thiệp cưới Đức Trưởng ♥ Hồng Nhung" />
+  <meta property="og:description" content="Tiệc cưới 15h00 Thứ Bảy 28.11.2026 — Lễ thành hôn Chủ nhật 29.11.2026" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=18" />
+</head>
+<body class="locked">
+
+  <!-- ========== MÀN HÌNH PHONG BÌ ========== -->
+  <div id="cover" class="cover">
+    <div class="cover-inner">
+      <p class="cover-label">Thiệp mời cưới</p>
+      <div class="envelope" id="envelope">
+        <div class="env-back"></div>
+        <div class="env-letter">
+          <span class="hy">囍</span>
+          <p class="script" data-bind="shortNames"></p>
+          <p class="small" data-bind="dateDots"></p>
+        </div>
+        <div class="env-front"></div>
+        <div class="env-flap"></div>
+        <div class="env-seal">囍</div>
+      </div>
+      <p class="cover-guest">Trân trọng kính mời: <strong id="guestName">Quý khách</strong></p>
+      <button class="btn btn-primary btn-shine" id="openBtn">Mở thiệp</button>
+      <p class="cover-hint">♪ Bật âm thanh để nghe nhạc cưới</p>
+    </div>
+  </div>
+
+  <!-- ========== NÚT NHẠC ========== -->
+  <button class="music-btn" id="musicBtn" aria-label="Bật/tắt nhạc" hidden>
+    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+  </button>
+  <audio id="bgMusic" loop preload="none"></audio>
+
+  <!-- Hoa rơi -->
+  <div id="petals" class="petals" aria-hidden="true"></div>
+
+  <main id="main">
+
+    <!-- ========== HERO ========== -->
+    <section class="hero" id="home">
+      <div class="hero-photo" id="heroPhoto"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content reveal">
+        <p class="eyebrow">Save the date</p>
+        <h1 class="script hero-names">
+          <span data-bind="groomShort"></span>
+          <span class="amp">&amp;</span>
+          <span data-bind="brideShort"></span>
+        </h1>
+        <p class="hero-date" data-bind="dateDots"></p>
+        <p class="hero-guest" data-guest-box hidden><span>Trân trọng kính mời</span><strong class="script" data-guest></strong></p>
+        <a href="#invite" class="scroll-down" aria-label="Cuộn xuống"><span></span></a>
+      </div>
+    </section>
+
+    <!-- ========== LỜI MỜI & GIA ĐÌNH ========== -->
+    <section class="section invite" id="invite">
+      <div class="container">
+        <div class="families reveal">
+          <div class="family">
+            <h4>Nhà trai</h4>
+            <p>Ông: <span data-bind="groomFather"></span></p>
+            <p>Bà: <span data-bind="groomMother"></span></p>
+            <p class="addr" data-bind="groomAddress"></p>
+          </div>
+          <div class="hy-big">囍</div>
+          <div class="family">
+            <h4>Nhà gái</h4>
+            <p>Ông: <span data-bind="brideFather"></span></p>
+            <p>Bà: <span data-bind="brideMother"></span></p>
+            <p class="addr" data-bind="brideAddress"></p>
+          </div>
+        </div>
+
+        <p class="invite-text reveal">Trân trọng thông báo Lễ Thành Hôn của hai con chúng tôi</p>
+
+        <div class="couple reveal">
+          <div class="person">
+            <div class="avatar" id="groomPhoto"></div>
+            <p class="role" data-bind="groomRole"></p>
+            <h3 class="script" data-bind="groomName"></h3>
+            <p class="bio" data-bind="groomBio"></p>
+          </div>
+          <div class="heart-sep" aria-hidden="true">
+            <span class="ring"></span><span class="ring r2"></span>
+            <svg class="heart" viewBox="0 0 32 29">
+              <defs><linearGradient id="heartGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e05a70"/><stop offset="1" stop-color="#8e2c3a"/></linearGradient></defs>
+              <path fill="url(#heartGrad)" d="M16 29l-2.3-2.1C5.5 19.5 0 14.5 0 8.4 0 3.5 3.8 0 8.7 0c2.8 0 5.4 1.3 7.3 3.3C17.9 1.3 20.5 0 23.3 0 28.2 0 32 3.5 32 8.4c0 6.1-5.5 11.1-13.7 18.5L16 29z"/>
+              <ellipse cx="8.5" cy="8" rx="3.4" ry="2" fill="#fff" opacity=".4" transform="rotate(-35 8.5 8)"/>
+            </svg>
+            <i>♥</i><i>♥</i><i>♥</i>
+          </div>
+          <div class="person">
+            <div class="avatar" id="bridePhoto"></div>
+            <p class="role" data-bind="brideRole"></p>
+            <h3 class="script" data-bind="brideName"></h3>
+            <p class="bio" data-bind="brideBio"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== ĐẾM NGƯỢC ========== -->
+    <section class="section countdown-sec">
+      <div class="container reveal">
+        <h2 class="title">Đếm ngược ngày chung đôi</h2>
+        <div class="countdown" id="countdown">
+          <div><span id="cdD">0</span><small>Ngày</small></div>
+          <div><span id="cdH">0</span><small>Giờ</small></div>
+          <div><span id="cdM">0</span><small>Phút</small></div>
+          <div><span id="cdS">0</span><small>Giây</small></div>
+        </div>
+        <div class="calendar" id="calendar"></div>
+      </div>
+    </section>
+
+    <!-- ========== CHUYỆN TÌNH ========== -->
+    <section class="section story" id="story" hidden> <!-- tạm ẩn: xoá chữ hidden để hiện lại -->
+      <div class="container">
+        <h2 class="title reveal">Chuyện tình yêu</h2>
+        <p class="subtitle reveal">Hành trình từ hai người xa lạ trở thành một gia đình</p>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </section>
+
+    <!-- ========== SỰ KIỆN ========== -->
+    <section class="section events" id="events">
+      <div class="container">
+        <h2 class="title reveal">Sự kiện cưới</h2>
+        <p class="subtitle reveal">Sự hiện diện của Quý khách là niềm vinh dự cho gia đình chúng tôi</p>
+        <div class="guest-invite reveal">
+          <p>Trân trọng kính mời</p>
+          <p class="script guest-invite-name" id="guestInvite">Quý khách</p>
+          <p>đến dự buổi tiệc rượu chung vui cùng gia đình chúng tôi</p>
+        </div>
+        <div class="event-grid" id="eventGrid"></div>
+      </div>
+    </section>
+
+    <!-- ========== ALBUM ========== -->
+    <section class="section album" id="album">
+      <div class="container">
+        <h2 class="title reveal">Album hình cưới</h2>
+        <div class="gallery-wrap reveal">
+          <button class="g-nav g-prev" id="gPrev" aria-label="Ảnh trước">‹</button>
+          <div class="gallery" id="gallery"></div>
+          <button class="g-nav g-next" id="gNext" aria-label="Ảnh sau">›</button>
+        </div>
+        <p class="g-count"><span id="gCount"></span> · Vuốt để xem thêm ảnh</p>
+      </div>
+    </section>
+
+    <!-- ========== XÁC NHẬN THAM DỰ ========== -->
+    <section class="section rsvp" id="rsvp" hidden> <!-- tạm ẩn -->
+      <div class="container narrow">
+        <h2 class="title reveal">Xác nhận tham dự</h2>
+        <p class="subtitle reveal">Vui lòng phản hồi để chúng tôi chuẩn bị đón tiếp chu đáo nhất</p>
+        <form class="card form reveal" id="rsvpForm">
+          <label>Họ và tên *<input name="name" required placeholder="Nhập tên của bạn" /></label>
+          <label>Bạn là khách của
+            <select name="side"><option>Nhà trai</option><option>Nhà gái</option></select>
+          </label>
+          <label>Bạn sẽ tham dự chứ?
+            <select name="attend">
+              <option value="yes">Chắc chắn rồi, mình sẽ đến!</option>
+              <option value="maybe">Mình sẽ cố gắng</option>
+              <option value="no">Rất tiếc, mình không đến được</option>
+            </select>
+          </label>
+          <label>Số người tham dự
+            <select name="guests"><option>1</option><option>2</option><option>3</option><option>4+</option></select>
+          </label>
+          <label>Lời chúc gửi cô dâu chú rể
+            <textarea name="wish" rows="3" placeholder="Viết lời chúc của bạn..."></textarea>
+          </label>
+          <button class="btn btn-primary" type="submit">Gửi xác nhận</button>
+          <p class="form-msg" id="rsvpMsg"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ========== SỔ LƯU BÚT ========== -->
+    <section class="section wishes" id="wishes" hidden> <!-- tạm ẩn -->
+      <div class="container narrow">
+        <h2 class="title reveal">Sổ lưu bút</h2>
+        <div class="wish-list" id="wishList"></div>
+      </div>
+    </section>
+
+    <!-- ========== HỘP MỪNG CƯỚI ========== -->
+    <section class="section gift" id="gift">
+      <div class="container">
+        <h2 class="title reveal">Hộp mừng cưới</h2>
+        <p class="subtitle reveal">Cảm ơn tình cảm bạn dành cho chúng tôi</p>
+        <div class="gift-grid" id="giftGrid"></div>
+      </div>
+    </section>
+
+    <!-- ========== LỜI CẢM ƠN ========== -->
+    <section class="thanks">
+      <div class="thanks-overlay"></div>
+      <div class="thanks-content reveal">
+        <h2 class="script">Thank you!</h2>
+        <p>Rất hân hạnh được đón tiếp bạn trong ngày trọng đại của chúng tôi</p>
+        <p class="script thanks-names" data-bind="shortNames"></p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Thanh điều hướng dưới -->
+  <nav class="bottom-nav" id="bottomNav">
+    <a href="#home" title="Trang đầu">🏠</a>
+    <a href="#events" title="Sự kiện">📍</a>
+    <a href="#album" title="Album">📷</a>
+    <a href="#gift" title="Mừng cưới">🎁</a>
+  </nav>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lb-close" id="lbClose" aria-label="Đóng">×</button>
+    <button class="lb-nav lb-prev" id="lbPrev" aria-label="Ảnh trước">‹</button>
+    <img id="lbImg" alt="" />
+    <button class="lb-nav lb-next" id="lbNext" aria-label="Ảnh sau">›</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="qr-data.js?v=18"></script>
+  <script src="script.js?v=18"></script>
+</body>
+</html>

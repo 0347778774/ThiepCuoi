@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Tạo link mời khách</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ivory:#fbf7f1; --cream:#f4ece0; --wine:#8e2c3a; --wine-dark:#6b1e2a; --gold:#b8975a; --gold-light:#d9c08f; --ink:#3b2f2f; --muted:#7d6e66; --ok:#2f7a4f; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Be Vietnam Pro", system-ui, sans-serif; background: var(--cream); color: var(--ink); line-height: 1.6; font-size: 15px; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 16px 60px; }
+    h1 { font-family: "Great Vibes", cursive; font-weight: 400; color: var(--wine); font-size: 48px; text-align: center; line-height: 1.2; }
+    .lead { text-align: center; color: var(--muted); margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(107,30,42,.08); margin-bottom: 18px; }
+    .card h2 { font-size: 16px; color: var(--wine); margin-bottom: 10px; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    label { display: block; font-weight: 500; font-size: 14px; margin-bottom: 6px; }
+    .hint { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+    input, textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid #e3d8cb; border-radius: 10px; background: var(--ivory); outline: none; }
+    input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184,151,90,.15); }
+    textarea { resize: vertical; }
+    .btn { border: 1px solid var(--wine); background: #fff; color: var(--wine); padding: 7px 14px; border-radius: 999px; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 13.5px; white-space: nowrap; }
+    .btn:hover { background: var(--wine); color: #fff; }
+    .btn.primary { background: var(--wine); color: #fff; }
+    .btn.primary:hover { background: var(--wine-dark); }
+    .btn.small { padding: 4px 10px; font-size: 12.5px; }
+    .tag { display: inline-block; font-size: 11.5px; font-weight: 600; background: var(--cream); color: var(--wine); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
+    .seg { display: inline-flex; border: 1px solid var(--wine); border-radius: 999px; overflow: hidden; }
+    .seg button { border: 0; background: #fff; color: var(--wine); padding: 8px 20px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .seg button.active { background: var(--wine); color: #fff; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .toolbar input { max-width: 240px; padding: 7px 12px; }
+    .stats { margin-left: auto; color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #f0e7dc; vertical-align: middle; }
+    th { font-size: 12.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); font-weight: 600; }
+    td.name { font-weight: 500; }
+    td.link a { color: var(--muted); font-size: 12.5px; word-break: break-all; }
+    td.actions { white-space: nowrap; text-align: right; }
+    td.actions .btn { margin-left: 4px; }
+    tr.sent td.name::after { content: " ✓ đã gửi"; color: var(--ok); font-size: 12px; font-weight: 400; }
+    tr.sent { background: #f6fbf7; }
+    .empty { text-align: center; color: var(--muted); padding: 24px; font-style: italic; }
+    .warn { background: #fff6e5; border: 1px solid #f0d9a8; color: #7a5b17; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 10px; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: .25s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      thead { display: none; }
+      tr { display: grid; grid-template-columns: 1fr auto; padding: 10px 0; border-bottom: 1px solid #f0e7dc; }
+      td { border: none; padding: 2px 4px; }
+      td.no { display: none; }
+      td.link { grid-column: 1 / -1; }
+      td.actions { grid-column: 1 / -1; text-align: left; padding-top: 6px; }
+      td.actions .btn { margin: 0 4px 0 0; }
+      .stats { margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Tạo link mời khách</h1>
+    <p class="lead">Mỗi khách một link riêng, mở thiệp sẽ hiện đúng tên người được mời</p>
+
+    <div class="card">
+      <label for="baseUrl">Địa chỉ thiệp (link trang index.html sau khi đưa lên mạng)</label>
+      <input id="baseUrl" placeholder="https://ten-ban.github.io/thiepcuoi/" />
+      <div id="baseWarn" class="warn" hidden>Đây là đường dẫn file trên máy, khách sẽ không mở được. Hãy đưa thiệp lên mạng (GitHub Pages, Netlify...) rồi dán link vào đây.</div>
+      <label style="margin-top:16px">Thiệp dành cho</label>
+      <div class="seg"><button type="button" data-side="trai">Khách nhà trai</button><button type="button" data-side="gai">Khách nhà gái</button></div>
+      <p class="hint">Mỗi bên có danh sách khách, mẫu tin nhắn và đánh dấu "đã gửi" riêng. Thiệp nhà gái hiện địa chỉ và mã QR của cô dâu, thiệp nhà trai hiện của chú rể.</p>
+      <label for="gio" style="margin-top:16px">Giờ tiệc</label>
+      <input id="gio" placeholder="15h00" style="max-width:200px" />
+      <p class="hint">Để trống = 15h00 (giờ mặc định trên thiệp). Nhập giờ khác, ví dụ <b>17h30</b>, thì mọi link của bên này sẽ hiện giờ đó.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Danh sách khách</h2>
+        <label for="names">Mỗi dòng một khách, ghi kèm danh xưng</label>
+        <textarea id="names" rows="10" placeholder="Anh Nam&#10;Chị Lan và gia đình&#10;Gia đình chú Hùng&#10;Bạn Minh Anh"></textarea>
+        <p class="hint">Tên sẽ hiện nguyên văn sau chữ “Kính gửi” và “Trân trọng kính mời”. Dòng trùng sẽ được gộp.<br>Muốn giờ riêng cho một khách, ghi thêm sau dấu |, ví dụ: <b>Anh Nam | 17h30</b></p>
+      </div>
+      <div class="card">
+        <h2>Tin nhắn gửi kèm</h2>
+        <label for="tpl">Mẫu tin nhắn — dùng <code>{ten}</code>, <code>{gio}</code> và <code>{link}</code></label>
+        <textarea id="tpl" rows="10"></textarea>
+        <p class="hint"><button class="btn small" id="resetTpl" type="button">Khôi phục mẫu mặc định</button></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input id="search" placeholder="Tìm khách..." />
+        <button class="btn" id="copyAll" type="button">Copy tất cả tin nhắn</button>
+        <button class="btn" id="csv" type="button">Tải file Excel (CSV)</button>
+        <button class="btn" id="clearSent" type="button">Bỏ đánh dấu đã gửi</button>
+        <span class="stats" id="stats"></span>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Khách mời</th><th>Link</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DEFAULT_TPLS = {
+      trai: `Trân trọng kính mời {ten} đến dự tiệc cưới của Đức Trưởng & Hồng Nhung.
+
+🕒 {gio} Thứ Bảy, 28/11/2026 (tức 20/10 Bính Ngọ)
+📍 Nhà văn hoá TDP Trúc Ổ, P. Bồng Lai, TP. Bắc Ninh
+
+Thiệp mời online: {link}
+
+Sự hiện diện của {ten} là niềm vinh dự cho gia đình chúng tôi ♥`,
+      gai: `Trân trọng kính mời {ten} đến dự tiệc cưới của Hồng Nhung & Đức Trưởng.
+
+🕒 {gio} Thứ Bảy, 28/11/2026 (tức 20/10 Bính Ngọ)
+📍 Tư gia nhà gái, TDP Thổ Hà, P. Vân Hà, TP. Bắc Ninh
+
+Thiệp mời online: {link}
+
+Sự hiện diện của {ten} là niềm vinh dự cho gia đình chúng tôi ♥`,
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    // ---------- Lưu trạng thái trên máy (riêng cho từng bên) ----------
+    const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+    // mở tao-link.html?nha=gai hoặc ?nha=trai để vào thẳng danh sách của bên đó
+    const sideParam = new URLSearchParams(location.search).get("nha");
+    let side = (sideParam || get("taolink_side")) === "gai" ? "gai" : "trai";
+    let base = get("taolink_base") || "";
+    let state;
+    const KEY = () => "taolink_state_v2_" + side;
+
+    function load() {
+      state = { names: "", tpl: DEFAULT_TPLS[side], sent: [], gio: "" };
+      try {
+        // bên nhà trai lấy lại dữ liệu cũ (trước khi tách 2 bên)
+        const old = JSON.parse(get(KEY()) || (side === "trai" ? get("taolink_state_v1") : null)) || {};
+        if (old.base && !base) base = old.base;
+        if (old.names != null) state.names = old.names;
+        if (old.tpl != null) state.tpl = old.tpl.replace("🕒 15h00 ", "🕒 {gio} ").replace("🕒 [giờ] ", "🕒 {gio} ");
+        if (old.gio != null) state.gio = old.gio;
+        if (Array.isArray(old.sent)) state.sent = old.sent;
+      } catch {}
+      $("#names").value = state.names;
+      $("#tpl").value = state.tpl;
+      $("#gio").value = state.gio;
+      document.querySelectorAll("[data-side]").forEach((b) => b.classList.toggle("active", b.dataset.side === side));
+    }
+    const save = () => {
+      try {
+        localStorage.setItem(KEY(), JSON.stringify(state));
+        localStorage.setItem("taolink_base", base);
+        localStorage.setItem("taolink_side", side);
+      } catch {}
+    };
+
+    // Gợi ý địa chỉ thiệp nếu trang này đã ở trên mạng
+    if (!base && location.protocol.startsWith("http")) {
+      base = new URL("index.html", location.href).href.replace(/index\.html$/, "");
+    }
+    load();
+    $("#baseUrl").value = base;
+
+    // ---------- Xử lý ----------
+    const guestList = () => [...new Set(state.names.split("\n").map((s) => s.trim().replace(/\s+/g, " ")).filter(Boolean))];
+
+    // ---------- Giờ tiệc ----------
+    const DEFAULT_GIO = "15:00";
+    const pad = (n) => String(n).padStart(2, "0");
+    function parseGio(s) {     // "17h30", "17:30", "1730", "17h" => "17:30"
+      const m = String(s || "").trim().match(/^(\d{1,2})\s*(?:h|g|giờ|:|\.)?\s*(\d{2})?\s*(?:p|phút)?$/i);
+      if (!m) return "";
+      const h = +m[1], mi = +(m[2] || 0);
+      return h < 24 && mi < 60 ? pad(h) + ":" + pad(mi) : "";
+    }
+    const showGio = (t) => t.replace(":", "h");
+    // một dòng "Anh Nam | 17h30" => { name: "Anh Nam", gio: "17:30" }
+    // Viết hoa chữ cái đầu mỗi từ: "bạn nhung" => "Bạn Nhung" (giữ nguyên các chữ khác)
+    const titleCase = (s) => String(s).replace(/(^|\s)(\S)/g, (m, sp, ch) => sp + ch.toLocaleUpperCase("vi"));
+    function entry(line) {
+      const [raw, g] = line.split("|").map((s) => s.trim());
+      const name = titleCase(raw);
+      return { name, gio: parseGio(g) || parseGio(state.gio) || DEFAULT_GIO };
+    }
+
+    function linkFor(line) {
+      const url = base.trim();
+      if (!url) return "";
+      const { name, gio } = entry(line);
+      return url + (url.includes("?") ? "&" : "?") + "nha=" + side
+        + (gio !== DEFAULT_GIO ? "&gio=" + showGio(gio) : "")
+        + "&to=" + encodeURIComponent(name);
+    }
+    const messageFor = (line) => {
+      const { name, gio } = entry(line);
+      return state.tpl.split("{ten}").join(name).split("{gio}").join(showGio(gio)).split("{link}").join(linkFor(line));
+    };
+
+    function render() {
+      $("#baseWarn").hidden = !/^file:|^[a-z]:\\/i.test(base.trim());
+      const q = $("#search").value.trim().toLowerCase();
+      const all = guestList();
+      const list = all.map((n, i) => ({ n, i })).filter(({ n }) => !q || n.toLowerCase().includes(q));
+      const sentCount = all.filter((n) => state.sent.includes(n)).length;
+      $("#stats").textContent = `${all.length} khách · đã gửi ${sentCount}`;
+
+      if (!all.length) { $("#rows").innerHTML = `<tr><td colspan="4" class="empty">Nhập danh sách khách ở trên để tạo link</td></tr>`; return; }
+      if (!base.trim()) { $("#rows").innerHTML = `<tr><td colspan="4" class="empty">Nhập địa chỉ thiệp để tạo link</td></tr>`; return; }
+
+      $("#rows").innerHTML = list.map(({ n, i }) => {
+        const url = linkFor(n);
+        return `<tr class="${state.sent.includes(n) ? "sent" : ""}" data-name="${esc(n)}">
+          <td class="no">${i + 1}</td>
+          <td class="name">${esc(entry(n).name)}${entry(n).gio !== DEFAULT_GIO ? `<span class="tag">${showGio(entry(n).gio)}</span>` : ""}</td>
+          <td class="link"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></td>
+          <td class="actions">
+            <button class="btn small" data-act="link">Copy link</button>
+            <button class="btn small primary" data-act="msg">Copy tin nhắn</button>
+          </td></tr>`;
+      }).join("") || `<tr><td colspan="4" class="empty">Không tìm thấy khách</td></tr>`;
+    }
+
+    function toast(msg) {
+      const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+    }
+
+    async function copy(text) {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand("copy"); ta.remove();
+      }
+    }
+
+    // ---------- Sự kiện ----------
+    $("#baseUrl").addEventListener("input", (e) => { base = e.target.value; save(); render(); });
+    $("#names").addEventListener("input", (e) => { state.names = e.target.value; save(); render(); });
+    $("#gio").addEventListener("input", (e) => {
+      state.gio = e.target.value;
+      e.target.style.borderColor = state.gio.trim() && !parseGio(state.gio) ? "#c0392b" : "";
+      save(); render();
+    });
+    $("#tpl").addEventListener("input", (e) => { state.tpl = e.target.value; save(); });
+    $("#resetTpl").onclick = () => { state.tpl = DEFAULT_TPLS[side]; $("#tpl").value = state.tpl; save(); };
+    document.querySelectorAll("[data-side]").forEach((b) => (b.onclick = () => {
+      save(); side = b.dataset.side; load(); save(); $("#search").value = ""; render();
+      history.replaceState(null, "", "?nha=" + side);
+    }));
+    $("#search").addEventListener("input", render);
+
+    $("#rows").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-act]"); if (!btn) return;
+      const name = btn.closest("tr").dataset.name;
+      if (btn.dataset.act === "link") { await copy(linkFor(name)); toast("Đã copy link"); }
+      else { await copy(messageFor(name)); toast(`Đã copy tin nhắn cho ${entry(name).name}`); }
+      if (!state.sent.includes(name)) { state.sent.push(name); save(); render(); }
+    });
+
+    $("#copyAll").onclick = async () => {
+      const all = guestList(); if (!all.length || !base.trim()) return;
+      await copy(all.map((n) => `— ${entry(n).name} —\n${messageFor(n)}`).join("\n\n")); toast(`Đã copy ${all.length} tin nhắn`);
+    };
+
+    $("#csv").onclick = () => {
+      const all = guestList(); if (!all.length || !base.trim()) return;
+      const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
+      const lines = [["STT", "Khách mời", "Giờ", "Link", "Đã gửi", "Tin nhắn"].map(q).join(",")]
+        .concat(all.map((n, i) => [i + 1, entry(n).name, showGio(entry(n).gio), linkFor(n), state.sent.includes(n) ? "x" : "", messageFor(n)].map(q).join(",")));
+      const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `danh-sach-khach-moi-nha-${side}.csv`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+
+    $("#clearSent").onclick = () => { if (confirm("Bỏ toàn bộ đánh dấu đã gửi?")) { state.sent = []; save(); render(); } };
+
+    render();
+  </script>
+</body>
+</html>
