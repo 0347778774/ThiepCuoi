@@ -74,6 +74,10 @@
       <label for="gio" style="margin-top:16px">Giờ tiệc</label>
       <input id="gio" placeholder="15h00" style="max-width:200px" />
       <p class="hint">Để trống = 15h00 (giờ mặc định trên thiệp). Nhập giờ khác, ví dụ <b>17h30</b>, thì mọi link của bên này sẽ hiện giờ đó.</p>
+      <label style="margin-top:16px;display:flex;gap:8px;align-items:center;font-weight:500">
+        <input type="checkbox" id="usePreview" style="width:auto" /> Hiện "Trân trọng kính mời: tên khách" trong khung xem trước Zalo / Messenger
+      </label>
+      <p class="hint">Khi bật, mỗi khách có link dạng <b>…/k/trai-ban-nhung.html</b>. Sau khi nhập xong danh sách, bấm <b>"Tải trang xem trước (ZIP)"</b>, giải nén và upload thư mục <b>k</b> lên GitHub (cùng chỗ với index.html). Thêm khách mới thì tải và upload lại.</p>
     </div>
 
     <div class="grid">
@@ -96,6 +100,7 @@
         <input id="search" placeholder="Tìm khách..." />
         <button class="btn" id="copyAll" type="button">Copy tất cả tin nhắn</button>
         <button class="btn" id="csv" type="button">Tải file Excel (CSV)</button>
+        <button class="btn" id="zip" type="button" hidden>Tải trang xem trước (ZIP)</button>
         <button class="btn" id="clearSent" type="button">Bỏ đánh dấu đã gửi</button>
         <span class="stats" id="stats"></span>
       </div>
@@ -192,9 +197,95 @@ Sự hiện diện của {ten} là niềm vinh dự cho gia đình chúng tôi �
       return { name, gio: parseGio(g) || parseGio(state.gio) || DEFAULT_GIO };
     }
 
+    // ---------- Link có tên khách trong ảnh xem trước (Zalo / Messenger) ----------
+    // Zalo, Facebook không chạy JavaScript nên tiêu đề xem trước lấy từ file HTML tĩnh.
+    // Vì vậy mỗi khách có một trang nhỏ k/<ten>.html mang tiêu đề "Trân trọng kính mời: <tên>",
+    // trang này tự chuyển ngay sang thiệp thật.
+    let usePreview = get("taolink_preview") === "1";
+    const siteRoot = () => {
+      const u = base.trim().split("#")[0].split("?")[0];
+      return u.replace(/index\.html$/i, "").replace(/\/?$/, "/");
+    };
+    const slugify = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "khach";
+    function slugFor(line) {
+      const { name, gio } = entry(line);
+      return side + "-" + slugify(name) + (gio !== DEFAULT_GIO ? "-" + showGio(gio).toLowerCase() : "");
+    }
+    function directLink(line, prefix) {
+      const { name, gio } = entry(line);
+      return prefix + "?nha=" + side + (gio !== DEFAULT_GIO ? "&gio=" + showGio(gio) : "") + "&to=" + encodeURIComponent(name);
+    }
+    const escAttr = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    function stubHtml(line) {
+      const { name, gio } = entry(line);
+      const root = siteRoot(), page = root + "k/" + slugFor(line) + ".html", img = root + "images/og.jpg";
+      const couple = side === "gai" ? "Hồng Nhung ♥ Đức Trưởng" : "Đức Trưởng ♥ Hồng Nhung";
+      const title = `Trân trọng kính mời: ${name}`;
+      const desc = `Thiệp cưới ${couple} · Tiệc cưới ${showGio(gio)} Thứ Bảy 28.11.2026`;
+      const target = directLink(line, "../");
+      return `<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escAttr(title)}</title>
+<meta name="description" content="${escAttr(desc)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Thiệp cưới ${escAttr(couple)}">
+<meta property="og:title" content="${escAttr(title)}">
+<meta property="og:description" content="${escAttr(desc)}">
+<meta property="og:url" content="${escAttr(page)}">
+<meta property="og:image" content="${escAttr(img)}">
+<meta property="og:image:secure_url" content="${escAttr(img)}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${escAttr(img)}">
+<meta http-equiv="refresh" content="0; url=${escAttr(target)}">
+<script>location.replace(${JSON.stringify(target)} + location.hash);<\/script>
+</head><body style="font-family:sans-serif;text-align:center;padding:40px">
+<a href="${escAttr(target)}">Mở thiệp cưới</a>
+</body></html>
+`;
+    }
+
+    // Tạo file ZIP (không nén) — không cần thư viện ngoài
+    function crc32(buf) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < buf.length; i++) {
+        let c = (crc ^ buf[i]) & 0xFF;
+        for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xEDB88320 : c >>> 1;
+        crc = (crc >>> 8) ^ c;
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+    function makeZip(files) {
+      const enc = new TextEncoder(), parts = [], central = [];
+      let offset = 0;
+      for (const f of files) {
+        const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data), size = data.length;
+        const lh = new DataView(new ArrayBuffer(30));
+        lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+        lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, size, true);
+        lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+        parts.push(new Uint8Array(lh.buffer), name, data);
+        const ch = new DataView(new ArrayBuffer(46));
+        ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+        ch.setUint16(8, 0x0800, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true);
+        ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+        ch.setUint32(42, offset, true);
+        central.push(new Uint8Array(ch.buffer), name);
+        offset += 30 + name.length + size;
+      }
+      const cdSize = central.reduce((a, b) => a + b.length, 0);
+      const end = new DataView(new ArrayBuffer(22));
+      end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+      end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+    }
+
     function linkFor(line) {
       const url = base.trim();
       if (!url) return "";
+      if (usePreview) return siteRoot() + "k/" + slugFor(line) + ".html";
       const { name, gio } = entry(line);
       return url + (url.includes("?") ? "&" : "?") + "nha=" + side
         + (gio !== DEFAULT_GIO ? "&gio=" + showGio(gio) : "")
@@ -279,6 +370,25 @@ Sự hiện diện của {ten} là niềm vinh dự cho gia đình chúng tôi �
       const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `danh-sach-khach-moi-nha-${side}.csv`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+
+    $("#usePreview").checked = usePreview;
+    $("#zip").hidden = !usePreview;
+    $("#usePreview").onchange = (e) => {
+      usePreview = e.target.checked;
+      try { localStorage.setItem("taolink_preview", usePreview ? "1" : "0"); } catch {}
+      $("#zip").hidden = !usePreview;
+      render();
+    };
+    $("#zip").onclick = () => {
+      const all = guestList(); if (!all.length || !base.trim()) return;
+      if (!/^https?:/i.test(base.trim())) { alert("Cần nhập địa chỉ thiệp trên mạng (https://...) trước."); return; }
+      const files = all.map((n) => ({ name: "k/" + slugFor(n) + ".html", text: stubHtml(n) }));
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(makeZip(files));
+      a.download = `trang-xem-truoc-nha-${side}.zip`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast(`Đã tạo ${files.length} trang — giải nén rồi upload thư mục k lên GitHub`);
     };
 
     $("#clearSent").onclick = () => { if (confirm("Bỏ toàn bộ đánh dấu đã gửi?")) { state.sent = []; save(); render(); } };
