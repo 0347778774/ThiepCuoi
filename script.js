@@ -122,6 +122,10 @@ const CONFIG = {
   // Tự động cuộn chậm từ đầu đến cuối thiệp sau khi mở.
   // Khách chạm/cuộn/bấm => tạm dừng, sau resumeAfter ms không thao tác sẽ cuộn tiếp.
   // loop: tới cuối nghỉ bottomPause ms, lướt mượt về đầu, nghỉ topPause ms rồi cuộn lại
+  // Pháo hoa: khi mở thiệp và khi cuộn tới lời cảm ơn (duration: số mili-giây bắn)
+  // onLoop: bắn lại khi thiệp tự cuộn vòng về đầu; ambient: thỉnh thoảng bắn 1 quả khi đang xem nội dung
+  fireworks: { onOpen: true, onThanks: true, onLoop: true, duration: 4500, ambient: true, ambientEvery: [2500, 5000] },
+
   autoScroll: { enabled: true, speed: 45, startDelay: 2000, resumeAfter: 5000, loop: true, bottomPause: 3000, topPause: 2500 }, // speed: px/giây
 };
 
@@ -570,6 +574,184 @@ function burstHearts(x = "50%", y = "60%") {
   }
 }
 
+/* =====================================================================
+   PHÁO HOA (canvas) — bắn khi mở thiệp và khi cuộn tới lời cảm ơn
+   ===================================================================== */
+const Fireworks = (() => {
+  // bảng màu rực rỡ: vàng kim, đỏ, cam, hồng, tím, xanh ngọc, xanh lá, trắng
+  const COLORS = ["#ffd700", "#ff3b5c", "#ff8c1a", "#ff4dd2", "#b44dff", "#3d8bff", "#00e5ff", "#7cff4d", "#fff3b0", "#ffffff"];
+  const GRAVITY = 0.05, MAX_SPARKS = 1300;
+  let cv, ctx, W, H, rockets = [], sparks = [], flashes = [], until = 0, nextLaunch = 0, looping = false;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[(Math.random() * arr.length) | 0];
+
+  function setup() {
+    cv = document.createElement("canvas");
+    cv.className = "fireworks";
+    document.body.appendChild(cv);
+    ctx = cv.getContext("2d");
+    resize();
+    addEventListener("resize", resize);
+  }
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function launch() {
+    const ty = H * rand(0.12, 0.42);                 // độ cao nổ
+    rockets.push({ x: W * rand(0.15, 0.85), y: H + 10, vx: rand(-0.8, 0.8), vy: -Math.sqrt(2 * 0.12 * (H - ty)), color: pick(COLORS) });
+  }
+  // ---- Các kiểu pháo hoa: mỗi hàm trả về danh sách hướng bay (độ dài ~1) ----
+  const TAU = Math.PI * 2;
+  const SHAPES = {
+    // cúc tròn nhiều tầng, tia dài ngắn khác nhau
+    peony: (n) => Array.from({ length: n }, (_, i) => { const t = i / n * TAU, s = rand(0.45, 1); return [Math.cos(t) * s, Math.sin(t) * s]; }),
+    // vòng tròn đều
+    ring: (n) => Array.from({ length: n }, (_, i) => { const t = i / n * TAU; return [Math.cos(t), Math.sin(t)]; }),
+    // trái tim
+    heart: (n) => Array.from({ length: n }, (_, i) => {
+      const t = i / n * TAU;
+      return [16 * Math.sin(t) ** 3 / 17, -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 17];
+    }),
+    // ngôi sao 5 cánh (đi dọc theo đường viền sao)
+    star: (n) => {
+      const pts = [];
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 0.42 : 1;
+        pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+      }
+      return Array.from({ length: n }, (_, i) => {
+        const f = i / n * 10, k = f | 0, u = f - k, A = pts[k], B = pts[(k + 1) % 10];
+        return [A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u];
+      });
+    },
+    // bông hoa 5 cánh + nhụy
+    flower: (n) => {
+      const out = Array.from({ length: n }, (_, i) => {
+        const t = i / n * TAU, r = 0.3 + 0.7 * Math.abs(Math.cos(2.5 * t));
+        return [Math.cos(t) * r, Math.sin(t) * r];
+      });
+      for (let i = 0; i < 14; i++) { const t = i / 14 * TAU; out.push([Math.cos(t) * 0.18, Math.sin(t) * 0.18, "core"]); }
+      return out;
+    },
+    // vòng đôi hai màu
+    double: (n) => Array.from({ length: n }, (_, i) => { const t = i / n * TAU * 2, s = i % 2 ? 1 : 0.55; return [Math.cos(t) * s, Math.sin(t) * s, i % 2 ? "" : "core"]; }),
+  };
+  const SHAPE_WEIGHTS = [["peony", 3], ["ring", 2], ["heart", 2], ["star", 2], ["flower", 2], ["double", 2]];
+  function pickShape() {
+    let r = Math.random() * SHAPE_WEIGHTS.reduce((a, [, w]) => a + w, 0);
+    for (const [k, w] of SHAPE_WEIGHTS) if ((r -= w) < 0) return k;
+    return "peony";
+  }
+
+  function explode(r) {
+    const shape = pickShape();
+    const n = shape === "peony" ? (rand(90, 120) | 0) : 90;
+    const power = rand(4, 6) * (shape === "peony" ? 1 : 0.9);
+    const rainbow = Math.random() < 0.3;               // 30%: mỗi tia một màu (cầu vồng)
+    const c1 = pick(COLORS), c2 = pick(COLORS), core = pick(COLORS);
+    const dirs = SHAPES[shape](n);
+    dirs.forEach(([dx, dy, tag], i) => {
+      if (sparks.length >= MAX_SPARKS) return;
+      const color = tag === "core" ? core : rainbow ? COLORS[i % COLORS.length] : (i % 3 ? c1 : c2);
+      sparks.push({
+        x: r.x, y: r.y, vx: dx * power, vy: dy * power, life: 1,
+        decay: rand(0.010, 0.016), color, size: rand(1.8, 2.8),
+        twinkle: Math.random() < 0.35,                 // tia lấp lánh
+        crackle: Math.random() < 0.12,                 // tia nổ lách tách khi sắp tắt
+      });
+    });
+    // chớp sáng ở tâm vụ nổ
+    flashes.push({ x: r.x, y: r.y, life: 1, color: c1 });
+  }
+  function frame(now) {
+    // làm mờ khung trước để tạo vệt sáng
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+
+    if (now < until && now > nextLaunch) { launch(); nextLaunch = now + rand(280, 650); }
+
+    rockets = rockets.filter((r) => {
+      r.vy += 0.12; r.x += r.vx; r.y += r.vy;
+      ctx.fillStyle = r.color;
+      ctx.beginPath(); ctx.arc(r.x, r.y, 2.2, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.5;                              // đuôi lửa
+      ctx.beginPath(); ctx.arc(r.x - r.vx, r.y - r.vy * 1.5, 1.5, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (r.vy >= -0.5) { explode(r); return false; }
+      return true;
+    });
+    flashes = flashes.filter((f) => {
+      f.life -= 0.08;
+      if (f.life <= 0) return false;
+      const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 60);
+      g.addColorStop(0, "rgba(255,255,255," + 0.55 * f.life + ")");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(f.x - 60, f.y - 60, 120, 120);
+      return true;
+    });
+    const born = [];
+    sparks = sparks.filter((s) => {
+      s.vx *= 0.985; s.vy = s.vy * 0.985 + GRAVITY;
+      s.x += s.vx; s.y += s.vy; s.life -= s.decay;
+      if (s.crackle && s.life < 0.35) {                 // nổ lách tách thành vài tia nhỏ
+        s.crackle = false;
+        for (let k = 0; k < 4; k++) born.push({ x: s.x, y: s.y, vx: rand(-1.4, 1.4), vy: rand(-1.4, 1.4), life: 0.6, decay: 0.04, color: "#fff6d0", size: 1.2 });
+      }
+      if (s.life <= 0) return false;
+      const a = s.twinkle ? s.life * (0.4 + 0.6 * Math.random()) : s.life;
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = a * 0.22;                         // quầng sáng
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size * 2.6, 0, TAU); ctx.fill();
+      ctx.globalAlpha = a;                                // lõi sáng
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, TAU); ctx.fill();
+      return true;
+    });
+    if (born.length) sparks.push(...born.slice(0, MAX_SPARKS - sparks.length));
+    ctx.globalAlpha = 1;
+
+    if (now < until || rockets.length || sparks.length || flashes.length) requestAnimationFrame(frame);
+    else { ctx.clearRect(0, 0, W, H); looping = false; }
+  }
+  return {
+    start(ms = 4000) {
+      if (!cv) setup();
+      until = Math.max(until, performance.now() + ms);
+      if (!looping) { looping = true; requestAnimationFrame(frame); }
+    },
+    // bắn lẻ 1 quả (dùng cho pháo hoa thưa trong lúc xem nội dung)
+    one() {
+      if (!cv) setup();
+      launch();
+      if (!looping) { looping = true; requestAnimationFrame(frame); }
+    },
+  };
+})();
+
+// Pháo hoa thưa: mỗi 4–8 giây bắn 1 quả trong lúc khách xem nội dung thiệp
+function startAmbientFireworks() {
+  const cfg = CONFIG.fireworks || {};
+  if (!cfg.ambient) return;
+  const [min, max] = cfg.ambientEvery || [2500, 5000];
+  const tick = () => {
+    if (!document.hidden && !$("#lightbox").classList.contains("show")) Fireworks.one();
+    setTimeout(tick, min + Math.random() * (max - min));
+  };
+  setTimeout(tick, (cfg.duration || 4500) + 2000);   // bắt đầu sau đợt pháo hoa mở thiệp
+}
+
+// Bắn pháo hoa mỗi lần cuộn tới phần "Thank you"
+function initThanksFireworks() {
+  if (!(CONFIG.fireworks || {}).onThanks) return;
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) Fireworks.start(CONFIG.fireworks.duration || 4000);
+  }, { threshold: 0.5 }).observe($(".thanks"));
+}
+
 function initReveal() {
   const io = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
@@ -634,7 +816,10 @@ function initAutoScroll() {
       const k = Math.min(1, (t - back.start) / back.dur);
       pos = back.from * (1 - ease(k));
       go(pos);
-      if (k >= 1) { pos = 0; mode = "top"; waitUntil = t + (cfg.topPause ?? 2500); }
+      if (k >= 1) {
+        pos = 0; mode = "top"; waitUntil = t + (cfg.topPause ?? 2500);
+        if ((CONFIG.fireworks || {}).onLoop) Fireworks.start(CONFIG.fireworks.duration || 4500);   // vòng lại: bắn pháo hoa như lúc mở
+      }
     } else if (mode === "top" && t >= waitUntil) {
       mode = "down";
     }
@@ -671,6 +856,8 @@ function initCover(audio) {
       document.body.classList.remove("locked");
       $(".hero-content").classList.add("visible");
       setTimeout(startPetals, 700);   // hoa rơi sau khi chuyển cảnh xong cho mượt
+      if ((CONFIG.fireworks || {}).onOpen) setTimeout(() => Fireworks.start(CONFIG.fireworks.duration || 4500), 300);
+      startAmbientFireworks();
       setTimeout(initAutoScroll, (CONFIG.autoScroll || {}).startDelay ?? 2000);
     }, 2800);
   };
@@ -713,6 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderEvents();
   renderGallery();
   initCarousel();
+  initThanksFireworks();
   renderGifts();
   startCountdown();
   initRSVP();
