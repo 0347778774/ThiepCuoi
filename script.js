@@ -75,7 +75,7 @@ const CONFIG = {
   // Ảnh: đặt file vào thư mục images/ rồi ghi đường dẫn. Để trống => dùng ảnh minh hoạ.
   images: {
     hero: "images/hero.jpg",
-    groom: "images/groom.jpg",
+    groom: "images/chu-re.jpg",
     bride: "images/co-dau.jpg",
     thanks: "images/thanks.jpg",
     story: ["images/album/hd07338.jpg", "images/album/hd07927.jpg", "images/album/sun01131.jpg", "images/album/hd07953.jpg"],
@@ -99,8 +99,15 @@ const CONFIG = {
       "images/album/sun01131.jpg",
       "images/album/sun01190.jpg",
       "images/album/sun01262.jpg",
+      // ảnh ghép (khổ ngang/vuông): ghi thêm ratio = rộng / cao để khung hiển thị đúng, không bị cắt
+      { src: "images/album/collage-1.jpg", ratio: 1.429 },
+      { src: "images/album/collage-2.jpg", ratio: 0.985 },
+      { src: "images/album/collage-3.jpg", ratio: 1.429 },
+      { src: "images/album/collage-4.jpg", ratio: 1.177 },
+      { src: "images/album/collage-5.jpg", ratio: 0.667 },
+      { src: "images/album/collage-6.jpg", ratio: 0.747 },
       "images/co-dau-full.jpg",
-      "images/groom-full.jpg",
+      "images/chu-re-full.jpg",
     ],
   },
 
@@ -291,82 +298,114 @@ function renderEvents() {
 /* ---------- Album + Lightbox ---------- */
 let galleryList = [];
 let lbIndex = 0;
-// Album vuốt ngang: nút ‹ ›, số thứ tự ảnh, tự chuyển ảnh khi album đang hiện trên màn hình
+// Album slide 3D: kéo/vuốt (chuột & cảm ứng), nút ‹ ›, chấm tròn, tự chuyển ảnh
 function initCarousel() {
-  const g = $("#gallery");
-  const items = () => [...g.children];
-  const current = () => {
-    const mid = g.scrollLeft + g.clientWidth / 2;
-    let best = 0, dist = Infinity;
-    items().forEach((el, i) => {
-      const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid);
-      if (d < dist) { dist = d; best = i; }
-    });
-    return best;
-  };
-  const go = (i) => {
-    const list = items(); if (!list.length) return;
-    const el = list[(i + list.length) % list.length];
-    g.scrollTo({ left: el.offsetLeft - (g.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
-  };
-  const update = () => { $("#gCount").textContent = `${current() + 1} / ${items().length}`; };
-  $("#gPrev").onclick = () => { pause(); go(current() - 1); };
-  $("#gNext").onclick = () => { pause(); go(current() + 1); };
-  g.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
-  update();
+  const box = $("#cf"), stage = $("#gallery");
+  const items = [...stage.children], n = items.length;
+  if (!n) return;
+  let pos = 0;                                   // vị trí hiện tại (có thể lẻ khi đang kéo)
+  const spacing = () => items[0].offsetWidth * 0.62;
 
-  // Máy tính: giữ chuột và kéo để vuốt album
-  let drag = null, moved = false;
-  g.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "mouse" || e.button !== 0) return;
-    e.preventDefault();          // không bôi đen chữ / không kéo ảnh ra ngoài
-    drag = { x: e.clientX, left: g.scrollLeft, start: current() };
-    moved = false;
-    g.classList.add("dragging");
+  // dựng chấm tròn
+  $("#gDots").innerHTML = items.map((_, i) => `<button aria-label="Ảnh ${i + 1}" data-dot="${i}"></button>`).join("");
+  const dots = [...$("#gDots").children];
+
+  function layout() {
+    const cw = items[0].offsetWidth;
+    items.forEach((el, k) => {
+      let d = k - pos;
+      d = ((d % n) + n + n / 2) % n - n / 2;    // vòng tròn: lấy khoảng cách ngắn nhất
+      const a = Math.abs(d), s = Math.sign(d);
+      const x = a < 1 ? d * cw * 0.62 : s * (cw * 0.62 + (a - 1) * cw * 0.34);
+      const rot = -s * Math.min(a, 1) * 38;
+      const scale = 1 - Math.min(a, 3) * 0.06;
+      el.style.transform = `translateX(${x}px) translateZ(${-a * 150}px) rotateY(${rot}deg) scale(${scale})`;
+      el.style.opacity = a > 3.2 ? 0 : String(1 - Math.min(a, 3) * 0.24);
+      el.style.filter = `brightness(${1 - Math.min(a, 3) * 0.12})`;
+      el.style.zIndex = String(100 - Math.round(a * 10));
+      el.style.pointerEvents = a > 3.2 ? "none" : "";
+      el.classList.toggle("active", a < 0.5);
+    });
+    const cur = ((Math.round(pos) % n) + n) % n;
+    dots.forEach((b, i) => b.classList.toggle("on", i === cur));
+    $("#gCount").textContent = `${cur + 1} / ${n}`;
+  }
+  const go = (i) => { pos = Math.round(i); layout(); };
+  const cur = () => Math.round(pos);
+
+  $("#gPrev").onclick = () => { pause(); go(cur() - 1); };
+  $("#gNext").onclick = () => { pause(); go(cur() + 1); };
+  $("#gDots").onclick = (e) => {
+    const b = e.target.closest("[data-dot]"); if (!b) return;
+    pause();
+    const t = +b.dataset.dot, c = ((cur() % n) + n) % n;
+    let d = t - c; if (d > n / 2) d -= n; if (d < -n / 2) d += n;
+    go(cur() + d);
+  };
+
+  // kéo / vuốt
+  let drag = null;
+  box.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest(".g-nav")) return;
+    drag = { x: e.clientX, y: e.clientY, start: pos, moved: false, t: performance.now() };
+    pause();
   });
   addEventListener("pointermove", (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.x;
-    if (Math.abs(dx) > 5) moved = true;
-    g.scrollLeft = drag.left - dx;
+    if (!drag.moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - drag.y)) { drag.moved = true; box.classList.add("dragging"); }
+    if (drag.moved) { pos = drag.start - dx / spacing(); layout(); }
   });
-  addEventListener("pointerup", (e) => {
+  const end = (e) => {
     if (!drag) return;
-    const dx = e.clientX - drag.x, start = drag.start;
-    drag = null;
-    // kéo đủ xa thì sang ảnh kế bên theo hướng kéo, ngắn quá thì về ảnh gần nhất
-    let target = current();
-    if (dx < -40) target = Math.max(start + 1, target);
-    else if (dx > 40) target = Math.min(start - 1, target);
-    go(target);
-    setTimeout(() => g.classList.remove("dragging"), 450);
-  });
-  g.addEventListener("dragstart", (e) => e.preventDefault());
-  // vừa kéo xong thì không mở ảnh phóng to
-  g.addEventListener("click", (e) => { if (moved) { e.stopPropagation(); moved = false; } }, true);
+    const d = drag; drag = null;
+    box.classList.remove("dragging");
+    if (d.moved) {
+      const dx = e.clientX - d.x, fast = Math.abs(dx) / (performance.now() - d.t) > 0.4;
+      // vuốt nhanh hoặc đủ xa thì sang ảnh kế bên
+      go(fast || Math.abs(dx) > 40 ? (dx < 0 ? Math.max(Math.ceil(pos), d.start + 1) : Math.min(Math.floor(pos), d.start - 1)) : pos);
+      return;
+    }
+    // bấm (không kéo): ảnh giữa → phóng to, ảnh bên → chuyển tới ảnh đó
+    const it = e.target.closest && e.target.closest(".g-item");
+    if (!it) return;
+    const k = +it.dataset.i, c = ((cur() % n) + n) % n;
+    if (k === c) openLightbox(k);
+    else { let dd = k - c; if (dd > n / 2) dd -= n; if (dd < -n / 2) dd += n; go(cur() + dd); }
+  };
+  addEventListener("pointerup", end);
+  addEventListener("pointercancel", () => { if (drag) { drag = null; box.classList.remove("dragging"); go(pos); } });
+  box.addEventListener("dragstart", (e) => e.preventDefault());
 
+  // tự chuyển ảnh khi album đang hiện trên màn hình
   let visible = false, pausedUntil = 0;
-  const pause = () => { pausedUntil = Date.now() + 8000; };
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0.4 }).observe(g);
-  ["pointerdown", "touchstart", "wheel"].forEach((ev) => g.addEventListener(ev, pause, { passive: true }));
+  function pause() { pausedUntil = Date.now() + 8000; }
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0.4 }).observe(box);
   setInterval(() => {
-    if (visible && Date.now() > pausedUntil && !document.hidden && !$("#lightbox").classList.contains("show")) go(current() + 1);
+    if (visible && !drag && Date.now() > pausedUntil && !document.hidden && !$("#lightbox").classList.contains("show")) go(cur() + 1);
   }, 3500);
+
+  addEventListener("resize", layout);
+  layout();
 }
 
 function renderGallery() {
   const ratios = [[800, 1000], [800, 600], [800, 1100], [800, 800], [800, 560]];
-  galleryList = CONFIG.images.gallery.map((src, i) => {
+  // mỗi ảnh có thể là "đường-dẫn" hoặc { src, ratio } (ratio = rộng / cao, mặc định 2/3)
+  const entries = CONFIG.images.gallery.map((g) => (typeof g === "string" ? { src: g } : g));
+  galleryList = entries.map((g, i) => {
     const [w, h] = ratios[i % ratios.length];
-    return img(src, `Ảnh cưới ${i + 1}`, w, h, i);
+    return img(g.src, `Ảnh cưới ${i + 1}`, w, h, i);
   });
-  $("#gallery").innerHTML = galleryList.map((s, i) =>
-    `<div class="g-item" data-i="${i}"><img draggable="false" src="${s.replace("/album/", "/album/thumb/")}" alt="Ảnh cưới ${i + 1}" loading="lazy"></div>`).join("");
-  $("#gallery").addEventListener("click", (e) => {
-    const item = e.target.closest(".g-item");
-    if (item) openLightbox(+item.dataset.i);
-  });
+  $("#gallery").innerHTML = galleryList.map((s, i) => {
+    const thumb = s.replace("/album/", "/album/thumb/");
+    const fit = entries[i].ratio && Math.abs(entries[i].ratio - 2 / 3) > 0.05;   // ảnh không phải khổ dọc 2:3
+    return `<div class="g-item${fit ? " fit" : ""}" data-i="${i}">`
+      + (fit ? `<img class="bg" src="${thumb}" alt="" loading="lazy">` : "")
+      + `<img class="main" draggable="false" src="${thumb}" alt="Ảnh cưới ${i + 1}" loading="lazy"></div>`;
+  }).join("");
 }
+
 function openLightbox(i) {
   lbIndex = (i + galleryList.length) % galleryList.length;
   $("#lbImg").src = galleryList[lbIndex];
@@ -423,12 +462,35 @@ async function downloadFile(url, name) {
   toast("Đang tải mã QR ♥");
 }
 
+// Hộp quà mừng: bấm vào hộp → nắp bật lên → mở popup mã QR
+function initGiftBox() {
+  const wrap = $("#giftOpen"), modal = $("#giftModal");
+  const close = () => {
+    modal.hidden = true;
+    document.body.classList.remove("modal-open");
+    wrap.classList.remove("opened");
+  };
+  wrap.addEventListener("click", () => {
+    if (wrap.classList.contains("opened")) return;
+    wrap.classList.add("opened");
+    const r = wrap.getBoundingClientRect();
+    burstHearts(r.left + r.width / 2 + "px", r.top + r.height * 0.4 + "px");
+    setTimeout(() => {
+      modal.hidden = false;
+      document.body.classList.add("modal-open");
+    }, 550);
+  });
+  $("#giftClose").onclick = close;
+  modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) close(); });
+}
+
 function renderGifts() {
   $("#giftGrid").innerHTML = CONFIG.gifts.map((g, i) => {
     // Nếu chưa có ảnh QR, tự tạo QR VietQR từ số tài khoản (cần mạng)
     const qr = g.qr || `https://img.vietqr.io/image/${encodeURIComponent(g.bank)}-${g.account}-compact.png?accountName=${encodeURIComponent(g.owner)}`;
     return `
-    <div class="gift-card reveal">
+    <div class="gift-card">
       <h4>${esc(g.title)}</h4>
       <img class="gift-qr" src="${qr}" alt="QR ${esc(g.bank)}" onerror="this.src='${placeholder("Mã QR", 400, 400, i)}'">
       <p>${esc(g.bank)}</p>
@@ -795,7 +857,7 @@ function initAutoScroll() {
     const dt = last ? Math.min(t - last, 100) : 0;
     last = t;
     const tag = document.activeElement ? document.activeElement.tagName : "";
-    const busy = t < pausedUntil || $("#lightbox").classList.contains("show") || /INPUT|TEXTAREA|SELECT/.test(tag);
+    const busy = t < pausedUntil || $("#lightbox").classList.contains("show") || document.body.classList.contains("modal-open") || /INPUT|TEXTAREA|SELECT/.test(tag);
     const max = document.documentElement.scrollHeight - innerHeight;
 
     if (busy) {
@@ -905,6 +967,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startCountdown();
   initRSVP();
   initLightbox();
+  initGiftBox();
   initReveal();
   initCover(initMusic());
 });

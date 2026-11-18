@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=21" />
+  <link rel="stylesheet" href="style.css?v=26" />
 </head>
 <body class="locked">
 
@@ -168,11 +168,12 @@
     <section class="section album" id="album">
       <div class="container">
         <h2 class="title reveal">Album hình cưới</h2>
-        <div class="gallery-wrap reveal">
+        <div class="cf reveal" id="cf">
+          <div class="cf-stage" id="gallery"></div>
           <button class="g-nav g-prev" id="gPrev" aria-label="Ảnh trước">‹</button>
-          <div class="gallery" id="gallery"></div>
           <button class="g-nav g-next" id="gNext" aria-label="Ảnh sau">›</button>
         </div>
+        <div class="cf-dots" id="gDots"></div>
         <p class="g-count"><span id="gCount"></span> · Vuốt để xem thêm ảnh</p>
       </div>
     </section>
@@ -217,11 +218,57 @@
     <!-- ========== HỘP MỪNG CƯỚI ========== -->
     <section class="section gift" id="gift">
       <div class="container">
-        <h2 class="title reveal">Hộp mừng cưới</h2>
-        <p class="subtitle reveal">Cảm ơn tình cảm bạn dành cho chúng tôi</p>
-        <div class="gift-grid" id="giftGrid"></div>
+        <h2 class="gift-title reveal">Hộp quà mừng</h2>
+        <button class="giftbox-wrap reveal" id="giftOpen" type="button" aria-label="Mở hộp quà mừng cưới">
+          <!-- hộp quà nhỏ bay quanh -->
+          <span class="mini m1"></span><span class="mini m2"></span><span class="mini m3"></span>
+          <span class="mini m4"></span><span class="mini m5"></span><span class="mini m6"></span>
+          <span class="spark k1">✦</span><span class="spark k2">✦</span><span class="spark k3">✧</span><span class="spark k4">✦</span>
+          <!-- hộp quà chính -->
+          <svg class="giftbox" viewBox="0 0 220 230" aria-hidden="true">
+            <defs>
+              <linearGradient id="gbBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe2bd"/><stop offset="1" stop-color="#f2bf8a"/></linearGradient>
+              <linearGradient id="gbSide" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eab07a"/><stop offset="1" stop-color="#d9965f"/></linearGradient>
+              <linearGradient id="gbLid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9cc"/><stop offset="1" stop-color="#f6c995"/></linearGradient>
+              <linearGradient id="gbRib" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a30d24"/><stop offset=".5" stop-color="#e3253f"/><stop offset="1" stop-color="#a30d24"/></linearGradient>
+            </defs>
+            <ellipse cx="110" cy="218" rx="86" ry="10" fill="rgba(0,0,0,.25)"/>
+            <!-- thân hộp -->
+            <g class="gb-body">
+              <rect x="30" y="92" width="160" height="122" rx="6" fill="url(#gbBody)"/>
+              <rect x="150" y="92" width="40" height="122" rx="6" fill="url(#gbSide)" opacity=".55"/>
+              <text x="66" y="168" font-size="40" fill="#c8102e" opacity=".16" font-family="serif">囍</text>
+              <text x="122" y="196" font-size="26" fill="#c8102e" opacity=".14" font-family="serif">囍</text>
+              <rect x="97" y="92" width="26" height="122" fill="url(#gbRib)"/>
+            </g>
+            <!-- nắp hộp + nơ -->
+            <g class="gb-lid">
+              <rect x="20" y="70" width="180" height="30" rx="6" fill="url(#gbLid)"/>
+              <rect x="20" y="92" width="180" height="8" fill="rgba(160,90,40,.18)"/>
+              <rect x="95" y="70" width="30" height="30" fill="url(#gbRib)"/>
+              <path d="M110 70 C 70 20, 30 40, 50 66 C 62 80, 96 74, 110 70 Z" fill="#d81b36"/>
+              <path d="M110 70 C 150 20, 190 40, 170 66 C 158 80, 124 74, 110 70 Z" fill="#d81b36"/>
+              <path d="M110 70 C 80 36, 54 46, 62 62" fill="none" stroke="#ff6b7f" stroke-width="3" opacity=".7"/>
+              <path d="M110 70 C 140 36, 166 46, 158 62" fill="none" stroke="#ff6b7f" stroke-width="3" opacity=".7"/>
+              <path d="M104 72 L 84 110 L 96 104 L 100 116 Z" fill="#b5122b"/>
+              <path d="M116 72 L 136 110 L 124 104 L 120 116 Z" fill="#b5122b"/>
+              <circle cx="110" cy="70" r="11" fill="#e3253f"/>
+            </g>
+          </svg>
+        </button>
+        <p class="gift-hint">Nhấn để mở</p>
       </div>
     </section>
+
+    <!-- Popup mã QR mừng cưới -->
+    <div class="gift-modal" id="giftModal" hidden>
+      <div class="gift-dialog" role="dialog" aria-modal="true" aria-label="Mừng cưới">
+        <button class="gm-close" id="giftClose" type="button" aria-label="Đóng">×</button>
+        <h3 class="gm-title">Mừng cưới</h3>
+        <p class="gm-sub">Cảm ơn tình cảm bạn dành cho chúng tôi ♥</p>
+        <div class="gift-grid" id="giftGrid"></div>
+      </div>
+    </div>
 
     <!-- ========== LỜI CẢM ƠN ========== -->
     <section class="thanks">
@@ -253,7 +300,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="qr-data.js?v=21"></script>
-  <script src="script.js?v=21"></script>
+  <script src="qr-data.js?v=26"></script>
+  <script src="script.js?v=26"></script>
 </body>
 </html>
