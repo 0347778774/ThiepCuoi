@@ -454,25 +454,22 @@ function dataUrlToFile(dataUrl, name) {
   return new File([bytes], name, { type: mime });
 }
 
-function showSaveViewer(src) {
-  let v = $("#qrSave");
-  if (!v) {
-    v = document.createElement("div");
-    v.id = "qrSave"; v.className = "qr-save";
-    v.innerHTML = `<button class="gm-close" aria-label="Đóng">×</button><img alt="Mã QR mừng cưới"><p>Nhấn giữ vào ảnh rồi chọn <b>“Lưu ảnh”</b> / <b>“Tải ảnh xuống”</b></p>`;
-    document.body.appendChild(v);
-    v.addEventListener("click", (e) => { if (e.target === v || e.target.closest(".gm-close")) v.classList.remove("show"); });
-  }
-  v.querySelector("img").src = src;
-  v.classList.add("show");
-}
 
 async function downloadFile(url, name) {
   const embedded = (window.QR_DOWNLOADS || {})[url];
-  // Trình duyệt trong Zalo / Messenger / Facebook không cho tải file → hiện ảnh để nhấn giữ lưu
-  if (IN_APP) { showSaveViewer(embedded || new URL(url, location.href).href); return; }
+  // Trình duyệt trong Zalo / Messenger / Facebook chặn tải file → nhắc khách nhấn giữ mã QR ngay trên thiệp để lưu
+  if (IN_APP) { toast("Nhấn giữ vào mã QR để lưu ảnh ♥"); return; }
 
-  // Mọi trình duyệt khác (máy tính, Chrome/Safari điện thoại): tải file ảnh về luôn
+  // iPhone / iPad (Safari, Chrome): web không ghi thẳng vào Ảnh được → mở bảng chia sẻ, chọn "Lưu hình ảnh"
+  const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+  if (IS_IOS && embedded && navigator.canShare) {
+    try {
+      const file = dataUrlToFile(embedded, name);
+      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+    } catch (err) { if (err && err.name === "AbortError") return; }
+  }
+
+  // Android & máy tính: tải file ảnh về luôn (Android: ảnh vào thư mục Download, hiện trong Thư viện/Bộ sưu tập)
   let href, temp = false;
   try {
     const blob = embedded ? dataUrlToFile(embedded, name) : await fetch(url).then((r) => { if (!r.ok) throw 0; return r.blob(); });

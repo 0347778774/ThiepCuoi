@@ -508,12 +508,7 @@ a { color: inherit; }
 @keyframes gmFade { from { opacity: 0; } }
 @keyframes gmPop { from { opacity: 0; transform: scale(.85) translateY(20px); } }
 body.modal-open { overflow: hidden; }
-/* xem ảnh QR to để nhấn giữ lưu (trên điện thoại / trong Zalo, Messenger) */
-.qr-save { position: fixed; inset: 0; z-index: 400; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: rgba(20, 6, 10, .9); }
-.qr-save.show { display: flex; }
-.qr-save img { max-width: min(92vw, 420px); max-height: 72vh; border-radius: 14px; box-shadow: 0 20px 40px rgba(0, 0, 0, .4); -webkit-touch-callout: default; user-select: auto; }
-.qr-save p { color: #f6d9a8; font-size: 14px; text-align: center; }
-.qr-save .gm-close { position: absolute; top: 14px; right: 14px; }
+
 /* popup gọn: bỏ khung lồng khung, thu nhỏ khoảng cách để không phải cuộn */
 .gift-dialog { padding: 18px 18px 14px; max-height: calc(100dvh - 24px); display: flex; flex-direction: column; }
 .gift-dialog .gift-grid { order: -1; }                    /* thẻ QR lên trước, lời cảm ơn xuống cuối */
@@ -522,7 +517,7 @@ body.modal-open { overflow: hidden; }
 .gift-dialog .gift-grid { gap: 14px; }
 .gift-dialog .gift-card { padding: 0; background: none; box-shadow: none; }
 .gift-dialog .gift-card h4 { font-size: 22px; margin: 2px 40px 10px; }
-.gift-dialog .gift-qr { width: 168px; height: 168px; padding: 6px; margin: 0 auto 8px; }
+.gift-dialog .gift-qr { -webkit-touch-callout: default; width: 168px; height: 168px; padding: 6px; margin: 0 auto 8px; }
 .gift-dialog .gift-card p { margin: 0; font-size: 13.5px; }
 .gift-dialog .gift-card .acc { font-size: 20px; margin: 0; }
 .gift-dialog .gift-actions { margin-top: 10px; flex-wrap: nowrap; }
