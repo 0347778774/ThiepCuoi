@@ -131,6 +131,8 @@ const CONFIG = {
   // loop: tới cuối nghỉ bottomPause ms, lướt mượt về đầu, nghỉ topPause ms rồi cuộn lại
   // Pháo hoa: khi mở thiệp và khi cuộn tới lời cảm ơn (duration: số mili-giây bắn)
   // onLoop: bắn lại khi thiệp tự cuộn vòng về đầu; ambient: thỉnh thoảng bắn 1 quả khi đang xem nội dung
+  heartRate: 0.35,   // tỉ lệ trái tim trong hiệu ứng rơi (0 = chỉ cánh hoa)
+
   fireworks: { onOpen: true, onThanks: true, onLoop: true, duration: 4500, ambient: true, ambientEvery: [2500, 5000] },
 
   autoScroll: { enabled: true, speed: 45, startDelay: 2000, resumeAfter: 5000, loop: true, bottomPause: 3000, topPause: 2500 }, // speed: px/giây
@@ -318,10 +320,10 @@ function initCarousel() {
       const a = Math.abs(d), s = Math.sign(d);
       const x = a < 1 ? d * cw * 0.62 : s * (cw * 0.62 + (a - 1) * cw * 0.34);
       const rot = -s * Math.min(a, 1) * 38;
-      const scale = 1 - Math.min(a, 3) * 0.06;
-      el.style.transform = `translateX(${x}px) translateZ(${-a * 150}px) rotateY(${rot}deg) scale(${scale})`;
-      el.style.opacity = a > 3.2 ? 0 : String(1 - Math.min(a, 3) * 0.24);
-      el.style.filter = `brightness(${1 - Math.min(a, 3) * 0.12})`;
+      const scale = 1 - Math.min(a, 3) * 0.12;
+      // mỗi ảnh tự có phối cảnh riêng (perspective trong transform) → không cắt nhau, không nháy
+      el.style.transform = `translateX(${x}px) perspective(900px) rotateY(${rot}deg) scale(${scale})`;
+      el.style.opacity = a > 3.2 ? 0 : String(1 - Math.min(a, 3) * 0.26);
       el.style.zIndex = String(100 - Math.round(a * 10));
       el.style.pointerEvents = a > 3.2 ? "none" : "";
       el.classList.toggle("active", a < 0.5);
@@ -354,7 +356,10 @@ function initCarousel() {
     if (!drag) return;
     const dx = e.clientX - drag.x;
     if (!drag.moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - drag.y)) { drag.moved = true; box.classList.add("dragging"); }
-    if (drag.moved) { pos = drag.start - dx / spacing(); layout(); }
+    if (drag.moved) {
+      pos = drag.start - dx / spacing();
+      if (!drag.raf) drag.raf = requestAnimationFrame(() => { if (drag) drag.raf = 0; layout(); });   // tối đa 1 lần / khung hình
+    }
   });
   const end = (e) => {
     if (!drag) return;
@@ -401,8 +406,7 @@ function renderGallery() {
     const thumb = s.replace("/album/", "/album/thumb/");
     const fit = entries[i].ratio && Math.abs(entries[i].ratio - 2 / 3) > 0.05;   // ảnh không phải khổ dọc 2:3
     return `<div class="g-item${fit ? " fit" : ""}" data-i="${i}">`
-      + (fit ? `<img class="bg" src="${thumb}" alt="" loading="lazy">` : "")
-      + `<img class="main" draggable="false" src="${thumb}" alt="Ảnh cưới ${i + 1}" loading="lazy"></div>`;
+      + `<img class="main" draggable="false" src="${thumb}" alt="Ảnh cưới ${i + 1}" decoding="async"></div>`;   // tải sẵn ảnh nhỏ để vuốt không bị chớp
   }).join("");
 }
 
@@ -435,31 +439,67 @@ function initLightbox() {
 }
 
 /* ---------- Mừng cưới ---------- */
-// Tải ảnh về máy. Ưu tiên ảnh nhúng sẵn trong qr-data.js (tải được cả khi mở file trên máy),
-// nếu không có thì tải qua mạng; trình duyệt chặn thì mở ảnh ở tab mới để khách tự lưu.
+// Tải ảnh mã QR về máy.
+// - Máy tính: tải file thẳng về.
+// - Điện thoại (Safari, Chrome): mở bảng chia sẻ của máy → chọn "Lưu ảnh".
+// - Trình duyệt trong Zalo / Messenger / Facebook (không cho tải file): hiện ảnh to để khách nhấn giữ → Lưu ảnh.
+const IN_APP = /Zalo|FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|MicroMessenger|TikTok/i.test(navigator.userAgent);
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+
+function dataUrlToFile(dataUrl, name) {
+  const [head, b64] = dataUrl.split(",");
+  const mime = (head.match(/data:([^;]+)/) || [])[1] || "image/png";
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], name, { type: mime });
+}
+
+function showSaveViewer(src) {
+  let v = $("#qrSave");
+  if (!v) {
+    v = document.createElement("div");
+    v.id = "qrSave"; v.className = "qr-save";
+    v.innerHTML = `<button class="gm-close" aria-label="Đóng">×</button><img alt="Mã QR mừng cưới"><p>Nhấn giữ vào ảnh rồi chọn <b>“Lưu ảnh”</b> / <b>“Tải ảnh xuống”</b></p>`;
+    document.body.appendChild(v);
+    v.addEventListener("click", (e) => { if (e.target === v || e.target.closest(".gm-close")) v.classList.remove("show"); });
+  }
+  v.querySelector("img").src = src;
+  v.classList.add("show");
+}
+
 async function downloadFile(url, name) {
-  const save = (href, newTab) => {
-    const a = document.createElement("a");
-    a.href = href; a.download = name;
-    if (newTab) { a.target = "_blank"; a.rel = "noopener"; }
-    document.body.appendChild(a); a.click(); a.remove();
-  };
   const embedded = (window.QR_DOWNLOADS || {})[url];
-  if (embedded) {
-    save(embedded);
-    toast("Đã tải mã QR ♥");
-    return;
+  const src = embedded || new URL(url, location.href).href;
+
+  // 1) điện thoại có hỗ trợ chia sẻ file (Safari iOS, Chrome Android): mở bảng "Lưu ảnh"
+  if (IS_MOBILE && embedded && navigator.canShare) {
+    try {
+      const file = dataUrlToFile(embedded, name);
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Mã QR mừng cưới" });
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return;   // khách tự đóng bảng chia sẻ
+    }
   }
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error();
-    const href = URL.createObjectURL(await res.blob());
-    save(href);
-    setTimeout(() => URL.revokeObjectURL(href), 2000);
-  } catch {
-    save(url, true);
+  // 2) trình duyệt trong app hoặc điện thoại không chia sẻ được: hiện ảnh để nhấn giữ lưu
+  if (IN_APP || IS_MOBILE) { showSaveViewer(src); return; }
+
+  // 3) máy tính: tải file về
+  const a = document.createElement("a");
+  a.download = name;
+  if (embedded) a.href = embedded;
+  else {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      a.href = URL.createObjectURL(await res.blob());
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } catch { a.href = url; a.target = "_blank"; }
   }
-  toast("Đang tải mã QR ♥");
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Đã tải mã QR ♥");
 }
 
 // Hộp quà mừng: bấm vào hộp → nắp bật lên → mở popup mã QR
@@ -500,7 +540,6 @@ function renderGifts() {
         <button class="btn btn-outline" data-copy="${esc(g.account)}">Sao chép số tài khoản</button>
         <button class="btn btn-outline" data-download="${esc(qr)}" data-name="QR-mung-cuoi-${g.side === "gai" ? "co-dau" : "chu-re"}.png">Tải mã QR</button>
       </div>
-      <p class="gift-tip">Trên điện thoại có thể nhấn giữ vào mã QR để lưu ảnh</p>
     </div>`;
   }).join("");
   $("#giftGrid").addEventListener("click", async (e) => {
@@ -602,14 +641,15 @@ function initRSVP() {
    ===================================================================== */
 function spawnPetal() {
   const p = document.createElement("div");
-  p.className = "petal";
-  const size = 8 + Math.random() * 10;
+  const leaf = Math.random() < (CONFIG.heartRate ?? 0.35);   // khoảng 1/3 là trái tim
+  p.className = leaf ? "petal heart" : "petal";
+  const size = leaf ? 12 + Math.random() * 10 : 8 + Math.random() * 10;
   p.style.left = Math.random() * 100 + "vw";
   p.style.width = size + "px";
-  p.style.height = size * 0.85 + "px";
+  p.style.height = (leaf ? size * 0.9 : size * 0.85) + "px";
   p.style.setProperty("--dx", (Math.random() * 200 - 100) + "px");
   p.style.setProperty("--rot", (Math.random() * 720 - 360) + "deg");
-  p.style.animationDuration = 7 + Math.random() * 6 + "s";
+  p.style.animationDuration = (leaf ? 9 : 7) + Math.random() * 6 + "s";   // tim rơi chậm hơn
   $("#petals").appendChild(p);
   p.addEventListener("animationend", () => p.remove());
 }

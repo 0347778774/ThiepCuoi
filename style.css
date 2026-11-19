@@ -207,6 +207,11 @@ a { color: inherit; }
   opacity: .85;
   animation: fall linear forwards;
 }
+/* trái tim rơi (xen giữa cánh hoa) */
+.petal.heart {
+  background: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 29%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%27 stop-color=%27%23ff8fa3%27/%3E%3Cstop offset=%271%27 stop-color=%27%23d6284a%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill=%27url(%23g)%27 d=%27M16 29l-2.3-2.1C5.5 19.5 0 14.5 0 8.4 0 3.5 3.8 0 8.7 0c2.8 0 5.4 1.3 7.3 3.3C17.9 1.3 20.5 0 23.3 0 28.2 0 32 3.5 32 8.4c0 6.1-5.5 11.1-13.7 18.5L16 29z%27/%3E%3Cellipse cx=%278.5%27 cy=%278%27 rx=%273.2%27 ry=%271.9%27 fill=%27%23fff%27 opacity=%27.45%27 transform=%27rotate(-35 8.5 8)%27/%3E%3C/svg%3E") center / contain no-repeat;
+  border-radius: 0; opacity: .9; filter: drop-shadow(0 2px 3px rgba(150, 20, 50, .25));
+}
 @keyframes fall {
   to { transform: translate(var(--dx), 110vh) rotate(var(--rot)); }
 }
@@ -359,33 +364,35 @@ a { color: inherit; }
 .cf {
   --cw: min(62vw, 330px);                      /* bề rộng ảnh giữa */
   position: relative; height: calc(var(--cw) * 1.5 + 40px);
-  perspective: 1200px; overflow: hidden;
+  overflow: hidden;
   touch-action: pan-y; user-select: none; -webkit-user-select: none;
   margin: 0 -20px;                             /* tràn sát mép màn hình */
 }
-.cf-stage { position: absolute; inset: 0; transform-style: preserve-3d; }
+/* không dùng preserve-3d: tránh các ảnh nghiêng cắt nhau gây nháy trên điện thoại; độ sâu tạo bằng scale + z-index */
+.cf-stage { position: absolute; inset: 0; }
 .cf .g-item {
   position: absolute; left: 50%; top: 18px; width: var(--cw); aspect-ratio: 2 / 3;
   margin-left: calc(var(--cw) / -2);
   border-radius: 16px; overflow: hidden; background: var(--cream);
   box-shadow: 0 14px 34px rgba(107, 30, 42, .22);
-  transition: transform .65s cubic-bezier(.22, 1, .36, 1), opacity .65s ease, filter .65s ease;
-  will-change: transform; cursor: pointer;
+  transition: transform .65s cubic-bezier(.22, 1, .36, 1), opacity .65s ease;
+  will-change: transform, opacity; backface-visibility: hidden; -webkit-backface-visibility: hidden; cursor: pointer;
 }
 .cf.dragging .g-item { transition: none; }
 .cf .g-item.active { cursor: zoom-in; }
 .cf .g-item img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
-/* ảnh ghép khổ ngang/vuông: hiện trọn ảnh, nền là chính ảnh đó làm mờ */
+/* ảnh ghép khổ ngang/vuông: hiện trọn ảnh trên nền tối (không dùng blur cho nhẹ máy) */
+.cf .g-item.fit { background: linear-gradient(160deg, #2b2123, #171113); }
 .cf .g-item.fit img.main { object-fit: contain; }
-.cf .g-item .bg { filter: blur(16px) brightness(.85); transform: scale(1.2); }
 .g-nav {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 300;
   width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(59, 47, 47, .55); color: #fff; font-size: 28px; line-height: 1;
   backdrop-filter: blur(4px); box-shadow: var(--shadow);
 }
-.g-prev { left: calc(50% - var(--cw) / 2 - 64px); }
-.g-next { right: calc(50% - var(--cw) / 2 - 64px); }
+/* nút nằm sát mép ngoài cùng của dãy ảnh */
+.g-prev { left: 6px; }
+.g-next { right: 6px; }
 @media (max-width: 700px) { .g-prev { left: 8px; } .g-next { right: 8px; } .g-nav { width: 38px; height: 38px; font-size: 24px; } }
 .cf-dots { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 10px auto 0; max-width: 92vw; }
 .cf-dots button { width: 8px; height: 8px; border-radius: 99px; border: 0; padding: 0; cursor: pointer; background: rgba(142, 44, 58, .22); transition: width .3s, background .3s; }
@@ -501,6 +508,12 @@ a { color: inherit; }
 @keyframes gmFade { from { opacity: 0; } }
 @keyframes gmPop { from { opacity: 0; transform: scale(.85) translateY(20px); } }
 body.modal-open { overflow: hidden; }
+/* xem ảnh QR to để nhấn giữ lưu (trên điện thoại / trong Zalo, Messenger) */
+.qr-save { position: fixed; inset: 0; z-index: 400; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: rgba(20, 6, 10, .9); }
+.qr-save.show { display: flex; }
+.qr-save img { max-width: min(92vw, 420px); max-height: 72vh; border-radius: 14px; box-shadow: 0 20px 40px rgba(0, 0, 0, .4); -webkit-touch-callout: default; user-select: auto; }
+.qr-save p { color: #f6d9a8; font-size: 14px; text-align: center; }
+.qr-save .gm-close { position: absolute; top: 14px; right: 14px; }
 /* popup gọn: bỏ khung lồng khung, thu nhỏ khoảng cách để không phải cuộn */
 .gift-dialog { padding: 18px 18px 14px; max-height: calc(100dvh - 24px); display: flex; flex-direction: column; }
 .gift-dialog .gift-grid { order: -1; }                    /* thẻ QR lên trước, lời cảm ơn xuống cuối */
@@ -528,8 +541,12 @@ body.modal-open { overflow: hidden; }
 .gift-tip { font-size: 12px !important; color: var(--muted); margin-top: 10px; font-style: italic; }
 
 /* ================= CẢM ƠN ================= */
-.thanks { position: relative; min-height: 70vh; display: grid; place-items: center; text-align: center; color: #fff; background-size: cover; background-position: center 25%; background-attachment: fixed; padding: 80px 20px 120px; }
+.thanks { position: relative; min-height: 70vh; display: grid; place-items: center; text-align: center; color: #fff; background-size: cover; background-position: center 18%; background-attachment: scroll; padding: 80px 20px 120px; } /* ảnh cuộn cùng trang để luôn thấy mặt cô dâu chú rể */
 .thanks-overlay { position: absolute; inset: 0; background: rgba(60, 15, 22, .55); }
+/* laptop / máy tính: khung ngang 16:10 để thấy trọn mặt cô dâu chú rể và 2 tấm bảng cầm tay */
+@media (min-width: 901px) {
+  .thanks { height: 62.5vw; min-height: 0; background-position: center 22%; }
+}
 .thanks-content { position: relative; max-width: 560px; }
 .thanks h2 { font-size: clamp(60px, 12vw, 96px); line-height: 1.2; }
 .thanks-names { font-size: 40px; color: var(--gold-light); margin-top: 16px; }
