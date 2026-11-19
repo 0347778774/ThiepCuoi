@@ -469,36 +469,19 @@ function showSaveViewer(src) {
 
 async function downloadFile(url, name) {
   const embedded = (window.QR_DOWNLOADS || {})[url];
-  const src = embedded || new URL(url, location.href).href;
+  // Trình duyệt trong Zalo / Messenger / Facebook không cho tải file → hiện ảnh để nhấn giữ lưu
+  if (IN_APP) { showSaveViewer(embedded || new URL(url, location.href).href); return; }
 
-  // 1) điện thoại có hỗ trợ chia sẻ file (Safari iOS, Chrome Android): mở bảng "Lưu ảnh"
-  if (IS_MOBILE && embedded && navigator.canShare) {
-    try {
-      const file = dataUrlToFile(embedded, name);
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Mã QR mừng cưới" });
-        return;
-      }
-    } catch (err) {
-      if (err && err.name === "AbortError") return;   // khách tự đóng bảng chia sẻ
-    }
-  }
-  // 2) trình duyệt trong app hoặc điện thoại không chia sẻ được: hiện ảnh để nhấn giữ lưu
-  if (IN_APP || IS_MOBILE) { showSaveViewer(src); return; }
-
-  // 3) máy tính: tải file về
+  // Mọi trình duyệt khác (máy tính, Chrome/Safari điện thoại): tải file ảnh về luôn
+  let href, temp = false;
+  try {
+    const blob = embedded ? dataUrlToFile(embedded, name) : await fetch(url).then((r) => { if (!r.ok) throw 0; return r.blob(); });
+    href = URL.createObjectURL(blob); temp = true;
+  } catch { href = embedded || url; }
   const a = document.createElement("a");
-  a.download = name;
-  if (embedded) a.href = embedded;
-  else {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error();
-      a.href = URL.createObjectURL(await res.blob());
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    } catch { a.href = url; a.target = "_blank"; }
-  }
+  a.href = href; a.download = name; a.rel = "noopener";
   document.body.appendChild(a); a.click(); a.remove();
+  if (temp) setTimeout(() => URL.revokeObjectURL(href), 4000);
   toast("Đã tải mã QR ♥");
 }
 
