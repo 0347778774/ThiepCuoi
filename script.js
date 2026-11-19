@@ -216,7 +216,7 @@ function bindText() {
     $("#guestInvite").textContent = guest;
     document.querySelectorAll("[data-guest]").forEach((el) => (el.textContent = guest));
     document.querySelectorAll("[data-guest-box]").forEach((el) => (el.hidden = false));
-    document.title = `Kính mời ${guest} — ${coupleNames("♥")}`;
+    document.title = `Trân trọng kính mời ${guest} — ${coupleNames("♥")}`;
     const nameInput = $("#rsvpForm [name=name]");
     if (nameInput) nameInput.value = guest;
   }
